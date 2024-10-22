@@ -2,15 +2,20 @@
 #include <EdgeDetector.h>
 #include <Timer.h>
 
+#define TAM 2000
+
 using namespace GlobalLibrary;
 
 EdgeDetector bot1(16, EDGE_FALLING, PIN_INPUT_PULLUP, 50);
 Timer timer1(CYCLIC, 1000);
 Timer timerPWM(200, 1000); // 1 second HIGH, 0.5 second LOW
+Timer timerPWMArray[TAM];
+
+
 
 bool actEdge = false, actTimer;
-
 int pinLed = 19;
+unsigned long int tAux;
 
 void ledControl()
 {
@@ -36,6 +41,7 @@ void setup()
   Serial.begin(115200);
   //timer1.setCallback(ledControl);
   timerPWM.setCallback(ledOn,ledOff);
+  tAux=millis();
 }
 
 void loop()
@@ -51,9 +57,20 @@ void loop()
   //*FLANCO*/
 
   // Serial.println((String)"Toggle: "+actEdge+" Dread= "+dRead);
-  Serial.println(actPWM);
+  //Serial.println(actPWM);
  // Serial.println(timerPWM.getElapsedTime());
   //digitalWrite(pinLed,actPWM);
+
+  for(int i=0;i<TAM;i++)
+  {
+    timerPWMArray[i].update(true);
+  }
+
+  unsigned long int t=millis()-tAux;
+  Serial.println(t);
+  tAux=millis();
+
+  
 }
 
 
