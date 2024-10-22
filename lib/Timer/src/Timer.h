@@ -9,7 +9,8 @@ namespace GlobalLibrary
     {
         TON,
         TOFF,
-        CYCLIC
+        CYCLIC,
+        PWM
     };
 
     class Timer
@@ -18,6 +19,17 @@ namespace GlobalLibrary
         // Constructor to initialize with a timer type and duration
         Timer(TimerType type, uint32_t duration)
             : mType(type), mDuration(duration), mStartTime(0), mRunning(false), mLastState(false), mReset(false) {}
+
+        // Constructor to initialize with a timer type, duration and callback
+        Timer(TimerType type, uint32_t duration, void (*callbackOn)())
+            : mType(type), mDuration(duration), mStartTime(0), mRunning(false), mLastState(false), mReset(false), mpCallbackOn(callbackOn) {}
+
+        // Constructor to initialize PWM timer
+        Timer(uint32_t TOn, uint32_t TOff)
+            : mType(PWM), mTOn(TOn), mTOff(TOff), mStartTime(0), mRunning(false), mLastState(false), mReset(false) {}
+
+        Timer(uint32_t TOn, uint32_t TOff,void (*callbackOn)(),void (*callbackOff)())
+            : mType(PWM), mTOn(TOn), mTOff(TOff), mStartTime(0), mRunning(false), mLastState(false), mReset(false),mpCallbackOn(callbackOn),mpCallbackOff(callbackOff) {}
 
         // Update the timer based on the monitored boolean value (enable)
         void update(bool enable)
@@ -50,17 +62,33 @@ namespace GlobalLibrary
             {
                 if (getTimerExpired() || !mRunning)
                 {
-                    executeCallback(); // Call the custom function on expiry
+                    executeCallback(0); // Call the custom function on expiry
                     start();           // Automatically restart the timer when it expires
+                    mTimerOutput=!mTimerOutput;
                 }
             }
 
-            mLastState = enable; // Update the last known state
+            // Handle PWM timer behavior
+            if (mType == PWM && enable)
+            {
+                if (getPwmExpired() || !mRunning)
+                {
+                    // Toggle between tON and tOFF
+                    mCurrentPwmState = !mCurrentPwmState;
+                    if(mCurrentPwmState)  executeCallback(0);  
+                    else  executeCallback(1);  
+                    startPwm(); // Restart with appropriate duration
+                    mTimerOutput=!mTimerOutput;
+                }
+
+                mLastState = enable;
+            }
 
             // Execute the callback function if the timer has expired for TON/TOFF
             if (getTimerExpired() && (mType == TON || mType == TOFF))
             {
-                executeCallback(); // Call the custom function on expiry
+                executeCallback(0); // Call the custom function on expiry
+                mTimerOutput=true;
             }
         }
 
@@ -70,10 +98,17 @@ namespace GlobalLibrary
             mReset = true;
         }
 
-        // Check if the timer has expired
-        bool getTimerExpired()
+        // Set the callback function to be executed when the timer expires
+        void setCallback(void (*callbackOn)())
         {
-            return mRunning && (millis() - mStartTime >= mDuration);
+            mpCallbackOn = callbackOn;
+        }
+
+        // Set the callback functions for PWM
+        void setCallback(void (*callbackOn)(),void (*callbackOff)() )
+        {
+            mpCallbackOn = callbackOn;
+            mpCallbackOff = callbackOff;
         }
 
         // Set a new duration for the timer
@@ -88,10 +123,9 @@ namespace GlobalLibrary
             return mRunning ? (millis() - mStartTime) : 0;
         }
 
-        // Set the callback function to be executed when the timer expires
-        void setCallback(void (*callback)())
+        bool getTimerOutput()
         {
-            mCallback = callback;
+            return mTimerOutput;
         }
 
     private:
@@ -103,18 +137,48 @@ namespace GlobalLibrary
             mReset = false; // Reset the reset flag
         }
 
+        // Start the PWM timer with the correct duration
+        void startPwm()
+        {
+            mStartTime = millis();
+            mRunning = true;
+            mDuration = mCurrentPwmState ? mTOn : mTOff;
+        }
+
+        // Check if the timer has expired
+        bool getTimerExpired()
+        {
+            return mRunning && (millis() - mStartTime >= mDuration);
+        }
+
+        // Check if the PWM timer has expired
+        bool getPwmExpired()
+        {
+            uint32_t currentDuration = mCurrentPwmState ? mTOn : mTOff;
+            return mRunning && (millis() - mStartTime >= currentDuration);
+        }
+
         // Stop the timer
         void stop()
         {
             mRunning = false;
+            mTimerOutput=false;
         }
 
-        // Execute the user-defined callback function when the timer expires
-        void executeCallback()
+        // Execute the user-defined callback function when the timer expires (type=0 is callbackOn, 1 callbackOff)
+        void executeCallback(int type)
         {
-            if (mCallback != nullptr)
+            if (mpCallbackOn != nullptr)
             {
-                mCallback(); // Call the function if it is set
+                if(type==0)
+                {
+                    mpCallbackOn(); // Call the function if it is set
+                }
+                else if(type==1)
+                {
+                    mpCallbackOff();
+                }
+                
             }
         }
 
@@ -124,47 +188,15 @@ namespace GlobalLibrary
         bool mRunning;       // Timer running state
         bool mLastState;     // Last monitored value state
         bool mReset;         // Flag to indicate a manual reset
-        void (*mCallback)(); // Pointer to the callback function
-    };
+        bool mTimerOutput;   // It will be set/reset to 1 or 0 depending on the timer type
+        void (*mpCallbackOn)(); // Pointer to the callback function
+        void (*mpCallbackOff)(); // Pointer to the callback function
 
-    class SoftwarePWM
-    {
-    public:
-        // Constructor: initializes the pulse durations and configures the timer
-        SoftwarePWM(uint32_t pulseHighDuration, uint32_t pulseLowDuration)
-            : mPulseHighDuration(pulseHighDuration), mPulseLowDuration(pulseLowDuration),
-              mTimer(TON, pulseHighDuration), mPulseState(false)
-        {
-            mTimer.setDuration(pulseHighDuration); // Set initial timer duration
-        }
-
-        // Update the state of the PWM signal based on the timer
-        void update(bool enable)
-        {
-            mTimer.update(enable);
-            // If timer has expired, toggle the PWM state
-            if (mTimer.getTimerExpired())
-            {
-                mPulseState = !mPulseState; // Toggle the PWM state
-
-                // Set the timer duration based on the next state
-                uint32_t nextDuration = mPulseState ? mPulseHighDuration : mPulseLowDuration;
-                mTimer.setDuration(nextDuration); // Update the timer duration for the new state
-                mTimer.reset();
-            }
-        }
-
-        // Get the current state of the PWM signal (HIGH or LOW)
-        bool getState() const
-        {
-            return mPulseState;
-        }
-
-    private:
-        uint32_t mPulseHighDuration; // Duration for HIGH state
-        uint32_t mPulseLowDuration;  // Duration for LOW state
-        Timer mTimer;                // Timer object for managing pulse timing
-        bool mPulseState;            // Current state of the pulse (HIGH or LOW)
+        // PWM-specific members
+        bool mPwmMode;         // Indicates if the timer is in PWM mode
+        uint32_t mTOn;         // PWM on duration
+        uint32_t mTOff;        // PWM off duration
+        bool mCurrentPwmState; // Current state: true if in tON, false if in tOFF
     };
 
 }
