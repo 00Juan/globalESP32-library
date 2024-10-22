@@ -1,7 +1,7 @@
-
 #ifndef __EDGEDETECTOR
 #define __EDGEDETECTOR
 #include <Arduino.h>
+
 namespace GlobalLibrary
 {
     enum EdgeMode
@@ -20,81 +20,31 @@ namespace GlobalLibrary
     class EdgeDetector
     {
     public:
-        // Constructor for pin edge detection with pin mMode and debounce time
-        EdgeDetector(uint8_t _pin, EdgeMode _mode, PinInputMode _pinMode, uint32_t _debounceTime)
-            : mPin(_pin), mMode(_mode), mDebounceTime(_debounceTime), mNumActivations(0)
-        {
-            // Set pin mMode based on input
-            if (_pinMode == PIN_INPUT)
-            {
-                pinMode(mPin, INPUT);
-            }
-            else if (_pinMode == PIN_INPUT_PULLUP)
-            {
-                pinMode(mPin, INPUT_PULLUP);
-            }
-            mLastState = digitalRead(mPin);
-            mLastDebounceTime = millis();
-            mEdgeDetected = false;
-            mDigitalReadStatus = mLastState; // Initialize with the initial pin state
-        }
+        // Constructor for pin edge detection with pin mode and debounce time
+        EdgeDetector(uint8_t _pin, EdgeMode _mode, PinInputMode _pinMode, uint32_t _debounceTime);
+
+        // Constructor with callback support for specific edge modes
+        EdgeDetector(uint8_t _pin, EdgeMode _mode, PinInputMode _pinMode, uint32_t _debounceTime, void (*callbackRising)(), void (*callbackFalling)());
 
         // Update function for edge detection on hardware pin
-        void update()
-        {
-            bool currentState = (digitalRead(mPin) == 0) ? false : true;
-            uint32_t currentTime = millis();
-
-            // Check if state has changed and debounce time has passed
-            
-            if (currentState != mLastState && (currentTime - mLastDebounceTime >= mDebounceTime))
-            {
-                // Detect the edge based on mMode
-                if ((mMode == EDGE_RISING && currentState && !mLastState) ||
-                    (mMode == EDGE_FALLING && !currentState && mLastState) ||
-                    (mMode == EDGE_TOGGLE))
-                {
-                    mEdgeDetected = true;
-                    mNumActivations++;
-                }
-                else
-                {
-                    mEdgeDetected = false;
-                }
-                mLastDebounceTime = currentTime; // Reset debounce time
-                
-            }
-            else
-            {
-                mEdgeDetected = false; // Reset if no edge detected
-            }
-            if(currentTime - mLastDebounceTime >= mDebounceTime)
-            {
-                mDigitalReadStatus = currentState;
-            }
-
-            mLastState = currentState; // Store current state
-        }
+        void update();
 
         // Check if an edge has been detected
-        bool getEdgeDetected()
-        {
-            return mEdgeDetected;
-        }
+        bool getEdgeDetected();
 
         // Get the debounced pin state after debounce completes
-        bool getDigitalRead()
-        {
-            return mDigitalReadStatus; // Returns the last debounced state
-        }
+        bool getDigitalRead();
 
         // Get the number of times the edge was activated
-        uint32_t getNumActivations()
-        {
-            return mNumActivations;
-        }
+        uint32_t getNumActivations();
+
+        // Set callback functions for edge detection
+        void setCallbacks(void (*callbackRising)(), void (*callbackFalling)());
 
     private:
+        // Execute the appropriate callback based on the edge type
+        void executeCallback(EdgeMode mode);
+
         uint8_t mPin;               // GPIO pin number (optional)
         EdgeMode mMode;             // Edge detection mode
         uint32_t mDebounceTime;     // Debounce time in milliseconds
@@ -103,8 +53,11 @@ namespace GlobalLibrary
         bool mLastState;            // Last known state
         bool mEdgeDetected;         // Flag for edge detection
         bool mDigitalReadStatus;    // The debounced digital state of the pin
+
+        // Callback function pointers
+        void (*mCallbackRising)();  // Pointer to the rising edge callback function
+        void (*mCallbackFalling)(); // Pointer to the falling edge callback function
     };
 }
-
 
 #endif

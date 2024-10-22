@@ -11,6 +11,7 @@ Timer timer1(CYCLIC, 1000);
 Timer timerPWM(200, 1000); // 1 second HIGH, 0.5 second LOW
 Timer timerPWMArray[TAM];
 
+EdgeDetector bot2(17,EDGE_FALLING,PIN_INPUT_PULLUP,50);
 
 
 bool actEdge = false, actTimer;
@@ -31,7 +32,7 @@ void ledOn()
 
 void ledOff()
 {
-  digitalWrite(pinLed, false);
+  digitalWrite(pinLed, true);
 }
 
 
@@ -40,13 +41,15 @@ void setup()
   pinMode(pinLed, OUTPUT);
   Serial.begin(115200);
   //timer1.setCallback(ledControl);
-  timerPWM.setCallback(ledOn,ledOff);
+ // timerPWM.setCallback(ledOn,ledOff);
   tAux=millis();
+  bot2.setCallbacks(ledOn,ledOff);
 }
 
 void loop()
 {
   bot1.update();
+  bot2.update();
   bool dRead = bot1.getDigitalRead();
   timer1.update(!dRead);
   timerPWM.update(true);
@@ -61,14 +64,14 @@ void loop()
  // Serial.println(timerPWM.getElapsedTime());
   //digitalWrite(pinLed,actPWM);
 
-  for(int i=0;i<TAM;i++)
-  {
-    timerPWMArray[i].update(true);
-  }
+  // for(int i=0;i<TAM;i++)
+  // {
+  //   timerPWMArray[i].update(true);
+  // }
 
   unsigned long int t=millis()-tAux;
-  Serial.println(t);
-  tAux=millis();
+  // Serial.println(t);
+  // tAux=millis();
 
   
 }
