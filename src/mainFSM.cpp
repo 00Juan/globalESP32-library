@@ -14,8 +14,8 @@ void onState2Update() { Serial.println("Updating State 2"); }
 void onState2Exit() { Serial.println("Exiting State 2"); }
 
 // Create states
-State state1(onState1Enter, NULL, onState1Exit);
-State state2(onState2Enter, NULL, onState2Exit);
+State state1("state1",onState1Enter, NULL, onState1Exit);
+State state2("state2",onState2Enter, NULL, onState2Exit);
 
 // Initialize FSM with the first state
 FiniteStateMachine fsm(&state1);
@@ -47,4 +47,6 @@ void loop()
     {
         fsm.transitionTo(&state1);
     }
+    Serial.println(fsm.getTimeInCurrentState());
+
 }

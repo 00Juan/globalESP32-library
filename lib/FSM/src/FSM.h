@@ -3,29 +3,49 @@
 
 #include "Arduino.h"
 
-typedef void (*StateCallback)();
+namespace GlobalLibrary
+{
 
-class State {
+  typedef void (*StateCallback)();
+  typedef bool (*TransitionGuard)();
+
+  class State
+  {
   public:
-    State(StateCallback onEnter, StateCallback onUpdate, StateCallback onExit);
+    State(const char *name, StateCallback onEnter, StateCallback onUpdate, StateCallback onExit, void *data = nullptr);
     void enter();
     void update();
     void exit();
+    const char *getName();
+    void *getData();
+    void setData(void *data);
 
   private:
-    StateCallback onEnterFunc;
-    StateCallback onUpdateFunc;
-    StateCallback onExitFunc;
-};
+    const char *mName;
+    StateCallback mOnEnterFunc;
+    StateCallback mOnUpdateFunc;
+    StateCallback mOnExitFunc;
+    void *mpData;
+  };
 
-class FiniteStateMachine {
+  struct StateMachineData
+  {
+    State *mpCurrentState;
+    unsigned long mLastStateChange;
+  };
+
+  class FiniteStateMachine
+  {
   public:
-    FiniteStateMachine(State* initialState);
+    FiniteStateMachine(State *initialState);
     void update();
-    void transitionTo(State* nextState);
+    bool transitionTo(State *nextState, TransitionGuard guard = nullptr);
+    State *getCurrentState();
+    const char *getCurrentStateName();
+    unsigned long getTimeInCurrentState();
 
   private:
-    State* currentState;
-};
-
+    StateMachineData mFsmData;
+  };
+}
 #endif
