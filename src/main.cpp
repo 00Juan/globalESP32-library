@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <EdgeDetector.h>
 #include <Timer.h>
-#include "../libGlobal/libGlobal.h"
+
 
 using namespace GlobalLibrary;
 
