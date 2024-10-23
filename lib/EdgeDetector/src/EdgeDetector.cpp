@@ -100,7 +100,7 @@ namespace GlobalLibrary
         return mNumActivations;
     }
 
-    void EdgeDetector::setCallbacks(void (*callbackRising)(), void (*callbackFalling)())
+    void EdgeDetector::setCallback(void (*callbackRising)(), void (*callbackFalling)())
     {
         mCallbackRising = callbackRising;
         mCallbackFalling = callbackFalling;

@@ -18,6 +18,7 @@ namespace GlobalLibrary
     Timer::Timer(uint32_t TOn, uint32_t TOff)
         : mType(PWM), mTOn(TOn), mTOff(TOff), mStartTime(0), mRunning(false), mLastState(false), mReset(false), mpCallbackOn(nullptr), mpCallbackOff(nullptr), mTimerOutput(false) {}
 
+    // Constructor to initialize PWM timer with callbacks
     Timer::Timer(uint32_t TOn, uint32_t TOff, void (*callbackOn)(), void (*callbackOff)())
         : mType(PWM), mTOn(TOn), mTOff(TOff), mStartTime(0), mRunning(false), mLastState(false), mReset(false), mpCallbackOn(callbackOn), mpCallbackOff(callbackOff), mTimerOutput(false) {}
 

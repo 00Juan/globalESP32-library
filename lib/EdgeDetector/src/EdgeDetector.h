@@ -6,9 +6,9 @@ namespace GlobalLibrary
 {
     enum EdgeMode
     {
-        EDGE_RISING,
-        EDGE_FALLING,
-        EDGE_TOGGLE
+        EDGE_RISING, //Rising edge
+        EDGE_FALLING, //Falling edge
+        EDGE_TOGGLE //Rising and falling edges
     };
 
     enum PinInputMode
@@ -39,7 +39,7 @@ namespace GlobalLibrary
         uint32_t getNumActivations();
 
         // Set callback functions for edge detection
-        void setCallbacks(void (*callbackRising)(), void (*callbackFalling)());
+        void setCallback(void (*callbackRising)(), void (*callbackFalling)());
 
     private:
         // Execute the appropriate callback based on the edge type
